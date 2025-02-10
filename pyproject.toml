@@ -1,0 +1,41 @@
+[project]
+name = "dask-mwu"
+version = "0.1.0"
+description = "Hypothesis testing using the Mann Whitney U / Wilcoxon Rank sum test for dask arrays."
+authors = [
+    {name = "Alex Chang"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.9,<4.0"
+dependencies = [
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry.dependencies]
+dask = { version = "^2023.3", optional = true }
+numpy = {version = "^2.0", optional = true}
+scipy = {version = "^1.7", optional = true}
+
+# thre are breaking API changes between zarr 2 and 3
+zarr = { version = "^2.0,<3.0", optional = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+ruff = "^0.9.6"
+pytest-cov = "^6.0.0"
+pytest-xdist = "^3.6.1"
+testcontainers = "^4.9.1"
+
+[tool.poetry.extras]
+dask = ["dask"]
+numpy = ["numpy"]
+scipy = ["scipy"]
+zarr2 = ["zarr"]
+
+
+
