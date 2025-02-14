@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 
 from dask_mwu.errors import EmptyArrayError, InvalidDimensionError
-from dask_mwu.pvals import get_masks
+from dask_mwu.rank_data import get_masks
 
 
 @pytest.mark.parametrize(

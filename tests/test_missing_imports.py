@@ -8,8 +8,9 @@ import pytest
 @pytest.mark.parametrize(
     "module_name, package_name, target_module",
     [
-        ("dask.array", "dask", "pvals"),
-        ("scipy.stats", "scipy", "pvals"),
+        ("dask.array", "dask", "rank_data"),
+        ("scipy.stats", "scipy", "rank_data"),
+        ("numpy", "numpy", "rank_data"),
     ],
 )
 def test_missing_dependencies(module_name, package_name, target_module):

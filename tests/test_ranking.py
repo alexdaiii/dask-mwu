@@ -7,7 +7,8 @@ import dask.array as da
 from scipy.stats import rankdata
 
 from dask_mwu.errors import InvalidDimensionError, InvalidChunkSizeError
-from dask_mwu.pvals import compute_rank, compute_ranks_per_group
+from dask_mwu.rank_data import compute_rank, compute_ranks_per_group, \
+    compute_in_group_ranksum
 
 rng = np.random.default_rng(42)
 
@@ -222,3 +223,46 @@ def test_invalid_compute_ranks_per_group(
 ):
     with pytest.raises(error):
         compute_ranks_per_group(ranks, masks)
+
+
+@pytest.mark.parametrize(
+    "_name, ranks, masks",
+    [
+        (
+            "5 obs, 3 features, 2 groups",
+            rankdata(np.array([[0, 1, 1],
+                               [1, 4, 1],
+                               [1, 3, 1],
+                               [1, 2, 1],
+                               [2, 6, 1]]), axis=0),
+            da.from_array(
+                [
+                    [True, False],
+                    [False, True],
+                    [False, True],
+                    [True, False],
+                    [True, False],
+                ]
+            ),
+        ),
+        (
+            "1 obs, 1 feature, 1 group",
+            rankdata(np.array([[10000]]), axis=0),
+            da.from_array([[True]]),
+        ),
+    ],
+)
+def test_ranksum(_name: str, ranks: da.Array, masks: da.Array):
+
+    actual = compute_in_group_ranksum(da.from_array(ranks), masks)
+
+    # should be the sum of ranks for the group, per feature
+    assert actual.shape == (ranks.shape[1], masks.shape[1])
+
+    for mask_col in range(masks.shape[1]):
+        mask = masks[:, mask_col]
+        expected_group = (ranks * mask.reshape(-1, 1)).sum(axis=0).compute()
+
+        actual_col = actual[:, mask_col]
+
+        assert np.allclose(expected_group, actual_col)
