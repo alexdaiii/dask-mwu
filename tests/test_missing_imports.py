@@ -9,7 +9,8 @@ import pytest
     "module_name, package_name, target_module",
     [
         ("dask.array", "dask", "rank_data"),
-        ("scipy.stats", "scipy", "rank_data"),
+        ("scipy._lib._util", "scipy", "rank_data"),
+        ("scipy.stats._stats_py", "scipy", "rank_data"),
         ("numpy", "numpy", "rank_data"),
     ],
 )

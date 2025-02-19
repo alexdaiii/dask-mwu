@@ -1,4 +1,10 @@
+"""
+Calculate p-values for the Mann-Whitney U test using Dask arrays.
 
+This code uses functions from the SciPy library.
+SciPy is licensed under the BSD license.
+For more information, visit: https://www.scipy.org/
+"""
 
 try:
     # this must be first since its actually a dep of dask
@@ -16,9 +22,48 @@ except ImportError:
 
 
 
+def _get_mwu_z(u_stat: np.ndarray[np.int64],
+               n1: np.ndarray[np.int64],
+               n2: np.ndarray[np.int64],
+               ties: da.Array):
+    """
+    Copied from https://github.com/scipy/scipy/blob/0f1fd4a7268b813fa2b844ca6038e4dfdf90084a/scipy/stats/_mannwhitneyu.py#L153
+
+    Args:
+        u_stat: The U statistic. An array of shape (n_features, n_conditions)
+        n1: The number of samples in the first group. An array of shape (n_conditions,)
+        n2: The number of samples in the second group. An array of shape (n_conditions,)
+        ties: The number of ties in the data. An array of shape (n_features, n_conditions)
+
+    Returns:
+        z: The Z statistic. An array of shape (n_features, n_conditions)
+    """
+    # Follows mannwhitneyu [2]
+    mu = n1 * n2 / 2
+    n = n1 + n2
+
+    # Tie correction according to [2], "Normal approximation and tie correction"
+    # "A more computationally-efficient form..."
+    tie_term = (t**3 - t).sum(axis=-1)
+    s = np.sqrt(n1*n2/12 * ((n + 1) - tie_term/(n*(n-1))))
+
+    numerator = U - mu - 0.5
+
+    # Continuity correction.
+    # Because SF is always used to calculate the p-value, we can always
+    # _subtract_ 0.5 for the continuity correction. This always increases the
+    # p-value to account for the rest of the probability mass _at_ q = U.
+    numerator -= 0.5
+
+    # no problem evaluating the norm SF at an infinity
+    with np.errstate(divide='ignore', invalid='ignore'):
+        z = numerator / s
+    return z
+
 
 def mwu_from_rank_sums(
-        rank_sums: da.Array,
+        ranks: da.Array,
+        ties: da.Array,
         masks: da.Array,
 ):
     """
@@ -53,7 +98,7 @@ def mwu_from_rank_sums(
     n1 = masks.sum(axis=0).compute()
     n2 = masks.shape[0] - n1
 
-    u1 = rank_sums - (n1 * (n1 + 1)) / 2
+    u1 = ranks - (n1 * (n1 + 1)) / 2
     u_stat = np.minimum(u1, n1 * n2 - u1)
 
 

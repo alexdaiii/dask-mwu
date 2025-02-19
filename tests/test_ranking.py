@@ -1,14 +1,18 @@
 from typing import Type
 
+import dask.array as da
+import dask.config
 import numpy as np
 import pytest
-import dask.array as da
-
 from scipy.stats import rankdata
+from scipy.stats._stats_py import _rankdata
 
-from dask_mwu.errors import InvalidDimensionError, InvalidChunkSizeError
-from dask_mwu.rank_data import compute_rank, compute_ranks_per_group, \
-    compute_in_group_ranksum
+from dask_mwu.errors import InvalidChunkSizeError, InvalidDimensionError
+from dask_mwu.rank_data import (
+    compute_in_group_ranksum,
+    compute_rank,
+    compute_ranks_per_group,
+)
 
 rng = np.random.default_rng(42)
 
@@ -43,12 +47,26 @@ def test_compute_rank(
     # rank the data and apply data so each row is ranked, columns are independent
     expected = rankdata(data, axis=0)
 
+    # From scipy.stats.rankdata
+    x = np.swapaxes(data, 0, -1)
+    _, expected_ties = _rankdata(x, method='average', return_ties=True)
+    expected_ties = np.swapaxes(expected_ties, 0, -1)
+
+    # compute the ranks
     actual = compute_rank(arr, n_features_per_chunk=output_chunks)
     actual_cmp = actual.compute()
 
-    assert expected.shape == actual_cmp.shape
-    assert np.allclose(expected, actual_cmp)
-    assert actual.chunksize == (data.shape[0], output_chunks)
+    actual_ranks = actual_cmp[:, :, 0]
+    actual_ties = actual_cmp[:, :, 1]
+
+    assert expected.shape == actual_ranks.shape
+    assert expected_ties.shape == actual_ties.shape
+    assert np.allclose(expected, actual_ranks)
+    assert np.allclose(expected_ties, actual_ties)
+    assert actual.chunksize == (data.shape[0], output_chunks, 1)
+
+    with dask.config.set({"visualization.engine": "cytoscape"}):
+        actual.visualize(f"../output/test_compute_rank_{_name}.png")
 
 
 @pytest.mark.parametrize(
