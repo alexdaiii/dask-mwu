@@ -191,19 +191,23 @@ def mann_whitney_u(
     Args:
         rank_sum: A dask array of shape (n_features, n_groups) where each position
             is the sum of the ranks for that feature.
-        tie_term: A dask array of shape (n_features, n_groups) where each position
-            is the number of ties for that feature.
+        tie_term: A dask array of shape (n_features,) where each position is the
+            tie term (t^3 - t) for that feature.
         masks: A dask array of shape (n_observations, n_groups) where each row
             is a boolean mask that selects the observations that belong to
             that group.
 
     Returns:
-        U: A numpy array of shape (n_features, ) that contains the U statistic
-            for each feature.
-        p_vals: A numpy array of shape (n_features, ) that contains the p-value
-            (uncorrected) for each feature. You need to apply FDR or FWER
-            correction to these p-values because n_features will usually be
-            very large.
+        A tuple of -
+        U: A numpy array of shape (n_features, n_groups) that contains the U statistic
+        for each feature.
+        p_vals: A numpy array of shape (n_features, n_groups) that contains the p-value
+        (uncorrected) for each feature. You need to apply FDR or FWER
+        correction to these p-values because n_features will usually be
+        very large.
+        p_adj: A numpy array of shape (n_features, n_groups) that contains the adjusted
+        p-values for each feature.
+
     """
     u_stat, p_vals = _mwu_from_rank_sums(rank_sum, tie_term, masks)
     p_adj = _get_padj(p_vals)
