@@ -1,7 +1,8 @@
 from typing import Type
 
 import dask.array as da
-import dask.config
+
+# import dask.config
 import numpy as np
 import pytest
 from scipy.stats import rankdata
@@ -49,7 +50,7 @@ def test_compute_rank(
 
     # From scipy.stats.rankdata
     x = np.swapaxes(data, 0, -1)
-    _, expected_ties = _rankdata(x, method='average', return_ties=True)
+    _, expected_ties = _rankdata(x, method="average", return_ties=True)
     expected_ties = np.swapaxes(expected_ties, 0, -1)
 
     # compute the ranks
@@ -65,8 +66,8 @@ def test_compute_rank(
     assert np.allclose(expected_ties, actual_ties)
     assert actual.chunksize == (data.shape[0], output_chunks, 1)
 
-    with dask.config.set({"visualization.engine": "cytoscape"}):
-        actual.visualize(f"../output/test_compute_rank_{_name}.png")
+    # with dask.config.set({"visualization.engine": "cytoscape"}):
+    #     actual.visualize(f"../output/test_compute_rank_{_name}.png")
 
 
 @pytest.mark.parametrize(
@@ -248,11 +249,10 @@ def test_invalid_compute_ranks_per_group(
     [
         (
             "5 obs, 3 features, 2 groups",
-            rankdata(np.array([[0, 1, 1],
-                               [1, 4, 1],
-                               [1, 3, 1],
-                               [1, 2, 1],
-                               [2, 6, 1]]), axis=0),
+            rankdata(
+                np.array([[0, 1, 1], [1, 4, 1], [1, 3, 1], [1, 2, 1], [2, 6, 1]]),
+                axis=0,
+            ),
             da.from_array(
                 [
                     [True, False],
@@ -271,7 +271,6 @@ def test_invalid_compute_ranks_per_group(
     ],
 )
 def test_ranksum(_name: str, ranks: da.Array, masks: da.Array):
-
     actual = compute_in_group_ranksum(da.from_array(ranks), masks)
 
     # should be the sum of ranks for the group, per feature

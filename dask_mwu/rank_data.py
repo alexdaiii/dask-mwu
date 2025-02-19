@@ -99,7 +99,7 @@ def get_masks(
     return da.from_array(one_hot, chunks=(-1, 1)), unique_elements
 
 
-def rankdata(a, method='average', *, axis=None, nan_policy='propagate') -> np.ndarray:
+def rankdata(a, method="average", *, axis=None, nan_policy="propagate") -> np.ndarray:
     """
     From: https://github.com/scipy/scipy/blob/0f1fd4a7268b813fa2b844ca6038e4dfdf90084a/scipy/stats/_stats_py.py#L10108
 
@@ -189,7 +189,7 @@ def rankdata(a, method='average', *, axis=None, nan_policy='propagate') -> np.nd
     array([ 2.,  3.,  4., nan,  1., nan])
 
     """
-    methods = ('average', 'min', 'max', 'dense', 'ordinal')
+    methods = ("average", "min", "max", "dense", "ordinal")
     if method not in methods:
         raise ValueError(f'unknown method "{method}"')
 
@@ -200,7 +200,7 @@ def rankdata(a, method='average', *, axis=None, nan_policy='propagate') -> np.nd
         axis = -1
 
     if x.size == 0:
-        dtype = float if method == 'average' else np.dtype("long")
+        dtype = float if method == "average" else np.dtype("long")
         return np.empty(x.shape, dtype=dtype)
 
     contains_nan, nan_policy = _contains_nan(x, nan_policy)
@@ -209,8 +209,7 @@ def rankdata(a, method='average', *, axis=None, nan_policy='propagate') -> np.nd
     ranks, ties = _rankdata(x, method, return_ties=True)
 
     if contains_nan:
-        i_nan = (np.isnan(x) if nan_policy == 'omit'
-                 else np.isnan(x).any(axis=-1))
+        i_nan = np.isnan(x) if nan_policy == "omit" else np.isnan(x).any(axis=-1)
         ranks = ranks.astype(float, copy=False)
         ranks[i_nan] = np.nan
 
@@ -264,17 +263,14 @@ def compute_rank(data: da.Array, *, n_features_per_chunk: int) -> da.Array:
 
     meta_output = np.array([], dtype=np.int64)
 
-    rank_ties = data.map_blocks(rankdata,
-                            axis=0,
-                            meta=meta_output,
-                            dtype=np.int64,
-                            chunks=(
-                                data.chunks[0],
-                                data.chunks[1],
-                                (2,)
-                            ),
-                            new_axis=[2]
-                            ).rechunk((data.chunks[0], n_features_per_chunk, 1))
+    rank_ties = data.map_blocks(
+        rankdata,
+        axis=0,
+        meta=meta_output,
+        dtype=np.int64,
+        chunks=(data.chunks[0], data.chunks[1], (2,)),
+        new_axis=[2],
+    ).rechunk((data.chunks[0], n_features_per_chunk, 1))
 
     return rank_ties
 
@@ -363,9 +359,12 @@ def compute_in_group_ranksum(
     return ranksums
 
 
+
+
 __all__ = [
     "get_masks",
     "compute_rank",
     "compute_ranks_per_group",
     "compute_in_group_ranksum",
+    "compute_tie_term",
 ]
