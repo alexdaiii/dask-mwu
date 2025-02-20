@@ -9,32 +9,16 @@ For more information, visit: https://www.scipy.org/
 from typing import NamedTuple
 
 
-try:
-    from statsmodels.stats.multitest import multipletests
-except ImportError:
-    raise ImportError(
-        "statsmodels is not installed. Please install statsmodels to use this package."
-    )
+from statsmodels.stats.multitest import multipletests
 
-try:
-    # this must be first since its actually a dep of dask
-    import numpy as np
-except ImportError:
-    raise ImportError(
-        "numpy is not installed. Please install numpy to use this package."
-    )
 
-try:
-    from scipy import stats
-except ImportError:
-    raise ImportError(
-        "scipy is not installed. Please install scipy to use this package."
-    )
+import numpy as np
 
-try:
-    import dask.array as da
-except ImportError:
-    raise ImportError("dask is not installed. Please install dask to use this package.")
+
+from scipy import stats
+
+
+import dask.array as da
 
 
 __all__ = ["mann_whitney_u"]

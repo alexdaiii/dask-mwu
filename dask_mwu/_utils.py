@@ -6,8 +6,9 @@ __all__ = [
     "InvalidDimensionError",
     "InvalidChunkSizeError",
     "EmptyArrayError",
-    "validate_ranks_and_masks"
+    "validate_ranks_and_masks",
 ]
+
 
 class InvalidDimensionError(ValueError):
     pass

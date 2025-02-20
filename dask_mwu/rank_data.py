@@ -18,30 +18,19 @@ from dask_mwu._utils import (
     InvalidDimensionError,
     InvalidChunkSizeError,
     validate_ranks_and_masks,
-    EmptyArrayError
+    EmptyArrayError,
 )
 
 # check if deps installed
-try:
-    # this must be first since its actually a dep of dask
-    import numpy as np
-except ImportError:
-    raise ImportError(
-        "numpy is not installed. Please install numpy to use this package."
-    )
 
-try:
-    import dask.array as da
-except ImportError:
-    raise ImportError("dask is not installed. Please install dask to use this package.")
+import numpy as np
 
-try:
-    from scipy._lib._util import _contains_nan
-    from scipy.stats._stats_py import  _rankdata
-except ImportError:
-    raise ImportError(
-        "scipy is not installed. Please install scipy to use this package."
-    )
+
+import dask.array as da
+
+
+from scipy._lib._util import _contains_nan
+from scipy.stats._stats_py import _rankdata
 
 
 __all__ = [
@@ -89,8 +78,6 @@ def get_masks(
     if choices.shape[0] == 0:
         raise EmptyArrayError("choices must have at least one element.")
 
-    print(choices.ndim, choices.shape)
-
     if choices.ndim > 2:
         raise InvalidDimensionError(
             "choices must be a 1D or 2D array with a single column."
@@ -100,17 +87,24 @@ def get_masks(
     if choices.ndim > 1:
         choices = choices.flatten()
 
-    # Step 1: Find unique elements and their indices
-    unique_elements, indices = np.unique(choices, return_inverse=True)
-    # Step 2: Create one-hot encoding using indices and identity matrix
-    one_hot = np.eye(len(unique_elements))[indices]
+    # Find unique elements and their indices
+    unique_elements = np.unique(choices)
 
-    logger.debug(f"Mask shape: {one_hot.shape}. {one_hot.__str__()}")
+    one_hot = da.concatenate(
+            [
+                da.from_array(np.array(choices == group, dtype=bool)[:, None])
+                for group in unique_elements
+            ],
+            axis=1,
+        )
 
-    return da.from_array(one_hot, chunks=(-1, 1)), unique_elements
+
+    return one_hot, unique_elements
 
 
-def _rank_and_ties(a, method="average", *, axis=None, nan_policy="propagate") -> np.ndarray[np.float64]:
+def _rank_and_ties(
+    a, method="average", *, axis=None, nan_policy="propagate"
+) -> np.ndarray[np.float64]:
     """
     From: https://github.com/scipy/scipy/blob/0f1fd4a7268b813fa2b844ca6038e4dfdf90084a/scipy/stats/_stats_py.py#L10108
 

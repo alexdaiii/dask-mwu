@@ -106,6 +106,7 @@ def test_get_masks(
 
     assert mask.shape == expected_mask.shape
     assert np.all(mask.compute() == expected_mask)
+    assert len(groups) == len(expected_groups)
     assert set(groups) == expected_groups
     assert mask.chunksize == (mask.shape[0], 1)
 

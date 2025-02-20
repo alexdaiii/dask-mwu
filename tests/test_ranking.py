@@ -16,7 +16,6 @@ from dask_mwu.rank_data import (
 
 
 class TestRankData:
-
     rng = np.random.default_rng(42)
 
     @pytest.mark.parametrize("chunks", [(-1, 2), (-1, 3), (-1, 6)])
@@ -70,7 +69,6 @@ class TestRankData:
         # with dask.config.set({"visualization.engine": "cytoscape"}):
         #     actual.visualize(f"../output/test_compute_rank_{_name}.png")
 
-
     @pytest.mark.parametrize(
         "_name, data, error",
         [
@@ -93,14 +91,14 @@ class TestRankData:
             ],
         ],
     )
-    def test_invalid_compute_rank(self, _name, data: da.Array, error: Type[Exception]) -> None:
+    def test_invalid_compute_rank(
+        self, _name, data: da.Array, error: Type[Exception]
+    ) -> None:
         with pytest.raises(error):
             rank_data(data, n_features_per_chunk=2)
 
 
-
 class TestRankSum:
-
     rng = np.random.default_rng(42)
     enc = OneHotEncoder(sparse_output=False)
 
@@ -114,9 +112,7 @@ class TestRankSum:
                     rng.integers(0, 100, size=(25, 12)),
                     axis=0,
                 ),
-                da.from_array(
-                    enc.fit_transform(rng.integers(5, size=(25, 1)))
-                ),
+                da.from_array(enc.fit_transform(rng.integers(5, size=(25, 1)))),
             ),
             (
                 "1 obs, 1 feature, 1 group",
@@ -125,12 +121,15 @@ class TestRankSum:
             ),
         ],
     )
-    def test_ranksum(self, _name: str, ranks: da.Array, masks: da.Array, chunks: int) -> None:
-        actual = compute_in_group_ranksum(da.from_array(ranks, chunks=(-1, chunks)), masks)
+    def test_ranksum(
+        self, _name: str, ranks: da.Array, masks: da.Array, chunks: int
+    ) -> None:
+        actual = compute_in_group_ranksum(
+            da.from_array(ranks, chunks=(-1, chunks)), masks
+        )
 
         # with dask.config.set({"visualization.engine": "cytoscape"}):
         #     actual.visualize(f"../output/test_ranksum_{_name}_chunks_{chunks}.png")
-
 
         # should be the sum of ranks for the group, per feature
         assert actual.shape == (ranks.shape[1], masks.shape[1])
@@ -143,109 +142,108 @@ class TestRankSum:
 
             assert np.allclose(expected_group, actual_col)
 
-
     @pytest.mark.parametrize(
         "_name, ranks, masks, error",
         [
             (
-                    "Somehow all true",
-                    da.from_array(
-                        [
-                            [1, 5, 3],
-                            [2, 4, 1],
-                            [3, 3, 2],
-                        ]
-                    ),
-                    da.from_array(
-                        [
-                            [True, True],
-                            [True, True],
-                            [True, True],
-                        ]
-                    ),
-                    ValueError,
+                "Somehow all true",
+                da.from_array(
+                    [
+                        [1, 5, 3],
+                        [2, 4, 1],
+                        [3, 3, 2],
+                    ]
+                ),
+                da.from_array(
+                    [
+                        [True, True],
+                        [True, True],
+                        [True, True],
+                    ]
+                ),
+                ValueError,
             ),
             (
-                    "Somehow all false",
-                    da.from_array(
-                        [
-                            [1, 5, 3],
-                            [2, 4, 1],
-                            [3, 3, 2],
-                        ]
-                    ),
-                    da.from_array(
-                        [
-                            [False, False],
-                            [False, False],
-                            [False, False],
-                        ]
-                    ),
-                    ValueError,
+                "Somehow all false",
+                da.from_array(
+                    [
+                        [1, 5, 3],
+                        [2, 4, 1],
+                        [3, 3, 2],
+                    ]
+                ),
+                da.from_array(
+                    [
+                        [False, False],
+                        [False, False],
+                        [False, False],
+                    ]
+                ),
+                ValueError,
             ),
             (
-                    "Mask is larger than ranks",
-                    da.from_array(
-                        [
-                            [1, 5, 3],
-                            [2, 4, 1],
-                            [3, 3, 2],
-                        ]
-                    ),
-                    da.from_array(
-                        [
-                            [True, False],
-                            [False, True],
-                            [False, True],
-                            [True, False],
-                        ]
-                    ),
-                    InvalidDimensionError,
+                "Mask is larger than ranks",
+                da.from_array(
+                    [
+                        [1, 5, 3],
+                        [2, 4, 1],
+                        [3, 3, 2],
+                    ]
+                ),
+                da.from_array(
+                    [
+                        [True, False],
+                        [False, True],
+                        [False, True],
+                        [True, False],
+                    ]
+                ),
+                InvalidDimensionError,
             ),
             (
-                    "Mask is smaller than ranks",
-                    da.from_array(
-                        [
-                            [1, 5, 3],
-                            [2, 4, 1],
-                            [3, 3, 2],
-                        ]
-                    ),
-                    da.from_array(
-                        [
-                            [True, False],
-                            [False, True],
-                        ]
-                    ),
-                    InvalidDimensionError,
+                "Mask is smaller than ranks",
+                da.from_array(
+                    [
+                        [1, 5, 3],
+                        [2, 4, 1],
+                        [3, 3, 2],
+                    ]
+                ),
+                da.from_array(
+                    [
+                        [True, False],
+                        [False, True],
+                    ]
+                ),
+                InvalidDimensionError,
             ),
             (
-                    "Ranks is 1D",
-                    da.from_array([1, 2]),
-                    da.from_array(
-                        [
-                            [True, False],
-                            [False, True],
-                        ]
-                    ),
-                    InvalidDimensionError,
+                "Ranks is 1D",
+                da.from_array([1, 2]),
+                da.from_array(
+                    [
+                        [True, False],
+                        [False, True],
+                    ]
+                ),
+                InvalidDimensionError,
             ),
             (
-                    "Mask is 1D",
-                    da.from_array(
-                        [
-                            [1, 5, 3],
-                            [2, 4, 1],
-                            [3, 3, 2],
-                        ]
-                    ),
-                    da.from_array([True, False, True]),
-                    InvalidDimensionError,
+                "Mask is 1D",
+                da.from_array(
+                    [
+                        [1, 5, 3],
+                        [2, 4, 1],
+                        [3, 3, 2],
+                    ]
+                ),
+                da.from_array([True, False, True]),
+                InvalidDimensionError,
             ),
         ],
     )
     def test_invalid_compute_ranks_per_group(
-            self, _name: str, ranks: da.Array, masks: da.Array, error: Type[Exception]
+        self, _name: str, ranks: da.Array, masks: da.Array, error: Type[Exception]
     ):
         with pytest.raises(error):
             compute_in_group_ranksum(ranks, masks)
