@@ -12,11 +12,13 @@ For more information, visit: https://www.scipy.org/
 """
 
 import logging
+from typing import TypeVar
 
-from dask_mwu.errors import (
+from dask_mwu._utils import (
     InvalidDimensionError,
-    EmptyArrayError,
     InvalidChunkSizeError,
+    validate_ranks_and_masks,
+    EmptyArrayError
 )
 
 # check if deps installed
@@ -30,18 +32,24 @@ except ImportError:
 
 try:
     import dask.array as da
-    import dask
 except ImportError:
     raise ImportError("dask is not installed. Please install dask to use this package.")
 
 try:
     from scipy._lib._util import _contains_nan
-    from scipy.stats._stats_py import _order_ranks, _rankdata
+    from scipy.stats._stats_py import  _rankdata
 except ImportError:
     raise ImportError(
         "scipy is not installed. Please install scipy to use this package."
     )
 
+
+__all__ = [
+    "get_masks",
+    "rank_data",
+    "compute_in_group_ranksum",
+    "compute_tie_term",
+]
 
 _LOG_FORMAT_DEBUG = (
     "%(asctime)s:: %(levelname)s:: %(message)s:: %(pathname)s:%(funcName)s:%(lineno)d"
@@ -52,9 +60,12 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
+T = TypeVar("T", bound=np.generic, covariant=True)
+
+
 def get_masks(
-    choices: np.ndarray,
-) -> tuple[da.Array, np.ndarray]:
+    choices: np.ndarray[T],
+) -> tuple[da.Array, np.ndarray[T]]:
     """
     Computes one-hot encoded masks for each group in the choices array.
     The choices array is a 1D or 2D array where each element represents
@@ -99,7 +110,7 @@ def get_masks(
     return da.from_array(one_hot, chunks=(-1, 1)), unique_elements
 
 
-def rankdata(a, method="average", *, axis=None, nan_policy="propagate") -> np.ndarray:
+def _rank_and_ties(a, method="average", *, axis=None, nan_policy="propagate") -> np.ndarray[np.float64]:
     """
     From: https://github.com/scipy/scipy/blob/0f1fd4a7268b813fa2b844ca6038e4dfdf90084a/scipy/stats/_stats_py.py#L10108
 
@@ -219,7 +230,7 @@ def rankdata(a, method="average", *, axis=None, nan_policy="propagate") -> np.nd
     return np.stack((ranks, ties), axis=-1)
 
 
-def compute_rank(data: da.Array, *, n_features_per_chunk: int) -> da.Array:
+def rank_data(data: da.Array, *, n_features_per_chunk: int) -> da.Array:
     """
     Applies the scipy rankdata function to the data to rank the data + figure out ties.
     Will map the rankdata function to the data array per chunk. Your 1st dim (row) CANNOT
@@ -264,7 +275,7 @@ def compute_rank(data: da.Array, *, n_features_per_chunk: int) -> da.Array:
     meta_output = np.array([], dtype=np.int64)
 
     rank_ties = data.map_blocks(
-        rankdata,
+        _rank_and_ties,
         axis=0,
         meta=meta_output,
         dtype=np.int64,
@@ -275,63 +286,10 @@ def compute_rank(data: da.Array, *, n_features_per_chunk: int) -> da.Array:
     return rank_ties
 
 
-def compute_ranks_per_group(
-    ranks: da.Array,
-    masks: da.Array,
-):
-    """
-    Taking in a (n_obs, n_features) array of ranks and a (n_obs, n_groups) array of masks,
-    it will take the ranks and convert it into a 3D array of (n_obs, n_features, 1).
-    It converts the masks into a 3D array of (n_obs, 1, n_groups).
-
-    It will broadcast and element-wise multiply the two groups to get an (n_obs, n_features, n_groups)
-    array. What that means is that it repeats the ranks by the number of groups.
-    Then it takes each column of the mask and replicates the mask to match the
-    shape of the ranks. Then it element-wise multiplies the two arrays.
-
-    By default, masks from the get_masks function are chunked so that each column
-    is in a single chunk. The ranks from the compute_rank function are chunked
-    so that only the 2nd dimension is chunked by n_features_per_chunk. This
-    allows for the computation to load all observations for a group for n_features_per_chunk
-    at a time. The expected memory usage is 2 * ncpus * n_obs * n_features_per_chunk * 8 bytes
-    since each group is inside a different chunk.
-
-    Args:
-        ranks: A dask array of shape (n_obs, n_features) where each row
-        is the rank of the corresponding row in the data array
-        masks: A dask array of shape (n_observations, n_groups) where each row
-        is a boolean mask that selects the observations that belong to that group.
-
-    Returns:
-        ranks_per_group: This is a 3D array of shape (n_obs, n_features, n_groups) where
-        each slice along the last dimension is the ranks of the data for that group.
-    """
-    # check the shapes to make sure they are compatible
-    if ranks.shape[0] != masks.shape[0]:
-        raise InvalidDimensionError(
-            "The number of observations in the ranks and masks arrays must be the same."
-        )
-
-    # This is just to make implementation easier
-    if ranks.ndim != 2:
-        raise InvalidDimensionError("ranks must be a 2D array.")
-
-    if masks.ndim != 2:
-        raise InvalidDimensionError("masks must be a 2D array.")
-
-    if not np.any(masks, axis=1).all():
-        raise ValueError("Each observation must belong to at least one group.")
-
-    if np.any(masks.sum(axis=1) > 1):
-        raise ValueError("Each observation can only belong to one group.")
-
-    return ranks[:, :, None] * masks[:, None, :]
-
-
 def compute_in_group_ranksum(
     ranks: da.Array,
     masks: da.Array,
-):
+) -> np.ndarray[np.float64]:
     """
     When comparing 2 groups G1 and G2 in the MWU test, we need to compute the
     sum of ranks for the in-group (G1) data. For every feature, this function
@@ -354,17 +312,31 @@ def compute_in_group_ranksum(
         is the sum of the ranks of the observations that belong to group G1.
 
     """
-    ranksums = compute_ranks_per_group(ranks, masks).sum(axis=0).compute()
+    validate_ranks_and_masks(ranks, masks)
+
+    # ranksums = (ranks[:, :, None] * masks[:, None, :]).sum(axis=0).compute()
+
+    ranksums = da.tensordot(
+        ranks,
+        masks,
+        axes=((0,), (0,)),
+    ).compute()
 
     return ranksums
 
 
+def compute_tie_term(
+    ties: da.Array,
+) -> np.ndarray[np.int64]:
+    """
+    Compute the tie term for the Mann-Whitney U test.
 
+    Args:
+        ties: A dask array of shape (n_obs, n_features) where each position
+            is the number of ties for that feature.
 
-__all__ = [
-    "get_masks",
-    "compute_rank",
-    "compute_ranks_per_group",
-    "compute_in_group_ranksum",
-    "compute_tie_term",
-]
+    Returns:
+        tie_term: A numpy array of shape (n_features, ) that contains the tie
+            term for each feature.
+    """
+    return (ties**3 - ties).sum(axis=0).compute()

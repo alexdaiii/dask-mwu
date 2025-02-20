@@ -40,23 +40,6 @@ except ImportError:
 __all__ = ["mann_whitney_u"]
 
 
-def compute_tie_term(
-        ties: da.Array,
-) -> np.ndarray[np.int64]:
-    """
-    Compute the tie term for the Mann-Whitney U test.
-
-    Args:
-        ties: A dask array of shape (n_obs, n_features) where each position
-            is the number of ties for that feature.
-
-    Returns:
-        tie_term: A numpy array of shape (n_features, ) that contains the tie
-            term for each feature.
-    """
-    return (ties ** 3 - ties).sum(axis=0).compute()
-
-
 def _get_mwu_z(
     u_stat: np.ndarray[np.int64],
     n1: np.ndarray[np.int64],

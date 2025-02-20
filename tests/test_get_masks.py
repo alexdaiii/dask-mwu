@@ -3,7 +3,7 @@ from typing import Type
 import pytest
 import numpy as np
 
-from dask_mwu.errors import EmptyArrayError, InvalidDimensionError
+from dask_mwu._utils import EmptyArrayError, InvalidDimensionError
 from dask_mwu.rank_data import get_masks
 
 
