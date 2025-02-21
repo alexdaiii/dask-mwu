@@ -91,19 +91,18 @@ def get_masks(
     unique_elements = np.unique(choices)
 
     one_hot = da.concatenate(
-            [
-                da.from_array(np.array(choices == group, dtype=bool)[:, None])
-                for group in unique_elements
-            ],
-            axis=1,
-        )
-
+        [
+            da.from_array(np.array(choices == group, dtype=bool)[:, None])
+            for group in unique_elements
+        ],
+        axis=1,
+    )
 
     return one_hot, unique_elements
 
 
 def _rank_and_ties(
-    a, method="average", *, axis=None, nan_policy="propagate"
+    a,
 ) -> np.ndarray[np.float64]:
     """
     From: https://github.com/scipy/scipy/blob/0f1fd4a7268b813fa2b844ca6038e4dfdf90084a/scipy/stats/_stats_py.py#L10108
@@ -194,19 +193,11 @@ def _rank_and_ties(
     array([ 2.,  3.,  4., nan,  1., nan])
 
     """
-    methods = ("average", "min", "max", "dense", "ordinal")
-    if method not in methods:
-        raise ValueError(f'unknown method "{method}"')
+    axis = 0
+    method = "average"
+    nan_policy="propagate"
 
     x = np.asarray(a)
-
-    if axis is None:
-        x = x.ravel()
-        axis = -1
-
-    if x.size == 0:
-        dtype = float if method == "average" else np.dtype("long")
-        return np.empty(x.shape, dtype=dtype)
 
     contains_nan, nan_policy = _contains_nan(x, nan_policy)
 
@@ -214,7 +205,7 @@ def _rank_and_ties(
     ranks, ties = _rankdata(x, method, return_ties=True)
 
     if contains_nan:
-        i_nan = np.isnan(x) if nan_policy == "omit" else np.isnan(x).any(axis=-1)
+        i_nan = np.isnan(x).any(axis=-1)
         ranks = ranks.astype(float, copy=False)
         ranks[i_nan] = np.nan
 
@@ -270,7 +261,6 @@ def rank_data(data: da.Array, *, n_features_per_chunk: int) -> da.Array:
 
     rank_ties = data.map_blocks(
         _rank_and_ties,
-        axis=0,
         meta=meta_output,
         dtype=np.int64,
         chunks=(data.chunks[0], data.chunks[1], (2,)),

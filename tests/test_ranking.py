@@ -38,6 +38,16 @@ class TestRankData:
                     ]
                 ),
             ],
+            [
+                "with nans",
+                np.array(
+                    [
+                        [1, 2, 3, np.nan, 11, 12],
+                        [4, 5, np.nan, 6, 13, 14],
+                        [7, np.nan, 9, 10, np.nan, np.nan],
+                    ]
+                )
+            ]
         ],
     )
     def test_compute_rank(
@@ -62,12 +72,13 @@ class TestRankData:
 
         assert expected.shape == actual_ranks.shape
         assert expected_ties.shape == actual_ties.shape
-        assert np.allclose(expected, actual_ranks)
-        assert np.allclose(expected_ties, actual_ties)
+        assert np.allclose(expected, actual_ranks, equal_nan=True)
+        assert np.allclose(expected_ties, actual_ties, equal_nan=True)
         assert actual.chunksize == (data.shape[0], output_chunks, 1)
 
         # with dask.config.set({"visualization.engine": "cytoscape"}):
         #     actual.visualize(f"../output/test_compute_rank_{_name}.png")
+
 
     @pytest.mark.parametrize(
         "_name, data, error",

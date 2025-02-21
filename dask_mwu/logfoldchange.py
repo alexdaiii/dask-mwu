@@ -3,10 +3,8 @@ import numpy as np
 
 from dask_mwu._utils import validate_ranks_and_masks
 
-def _compute_group_means(
-        data: da.Array,
-        mask: da.Array
-):
+
+def _compute_group_means(data: da.Array, mask: da.Array):
     total_sum = data.sum(axis=0).compute()[:, None]
 
     n1 = np.sum(mask, axis=0).compute()
@@ -23,9 +21,7 @@ def _compute_group_means(
 
 
 def compute_logfoldchange(
-    data: da.Array,
-    mask: da.Array,
-    base: float | None = None
+    data: da.Array, mask: da.Array, base: float | None = None
 ) -> np.ndarray[np.float64]:
     """
     Computes the logfoldchange of the mean expression for every group.
