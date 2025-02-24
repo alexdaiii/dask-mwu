@@ -118,12 +118,13 @@ def create_df(
                 "p_value": p_vals[:, i],
                 "p_adjusted": p_adj[:, i],
                 "logfoldchange": lfc[:, i],
+                "abs_logfoldchange": np.abs(lfc[:, i]),
             }
         )
 
         if sort_by == "asc":
-            df = df.sort_values("logfoldchange", ascending=True)
+            df = df.sort_values("abs_logfoldchange", ascending=True)
         else:
-            df = df.sort_values("logfoldchange", ascending=False)
+            df = df.sort_values("abs_logfoldchange", ascending=False)
 
         yield cat, df.head(top_n)

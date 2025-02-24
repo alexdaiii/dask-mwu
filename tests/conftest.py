@@ -7,6 +7,7 @@ from scanpy.tools._rank_genes_groups import _RankGenes
 @pytest.fixture
 def setup_anndata():
     def _setup_anndata(adata: ad.AnnData, base: float):
+        adata.obs["class"] = adata.obs["class"].astype("category")
         sc.pp.log1p(adata, base=base)
 
         return adata

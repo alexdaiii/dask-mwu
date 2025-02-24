@@ -1,4 +1,4 @@
 .PHONY: test
 
 test:
-	pytest --cov=dask_mwu --cov-report=html
+	pytest --cov=dask_mwu --cov-report=html -n auto
