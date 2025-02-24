@@ -208,12 +208,15 @@ def rank_data(data: da.Array, *, n_features_per_chunk: int) -> da.Array:
     be chunked. If they are, you will get an error since each row (observation)
     needs to be ranked.
 
-    Memory usage when performing compute() on any of the 2 returning arrays:
+    Memory usage when performing compute() the returning array:
 
-    >>> 2 * 10 * ncpus * n_observations * n_features_per_chunk * 8 bytes (int64)
+    >>> 2 * 12 * ncpus * n_observations * n_features_per_chunk * 8 bytes (int64)
 
     This is because scipy _rankdata will allocate ~10 additional arrays of equal
-    size to the input to _rankdata. Dask usually loads 2 * ncpus chunks at a time.
+    size to the input to _rankdata. You need ~2 extra arrays to hold the ranks
+    and the ties when they are computed.
+
+    Dask usually loads 2 * ncpus chunks at a time.
 
     It is HIGHLY recommended to save this data to disk after computing the ranks
     because this is one of the more expensive operations.
