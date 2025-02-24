@@ -86,10 +86,7 @@ class TestLogFoldChange:
         data, mask, categories = self.get_data_masks(data, groups)
         adata = self.setup_anndata(data, groups, base=base)
 
-        rg = get_ranked_data(
-            adata,
-            base
-        )
+        rg = get_ranked_data(adata, base)
 
         actual = compute_logfoldchange(
             data, mask, base=adata.uns.get("log1p", {}).get("base")
@@ -106,5 +103,3 @@ class TestLogFoldChange:
             assert expected.shape == actual_lfc.shape
 
             assert np.allclose(expected, actual_lfc)
-
-

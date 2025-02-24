@@ -7,21 +7,14 @@ from dask_mwu.create_df import create_df
 
 rng = np.random.default_rng(42)
 
-@pytest.mark.parametrize(
-    "top_n",
-    [
-        None,
-        5,
-        10,
-        12
-    ]
-)
+
+@pytest.mark.parametrize("top_n", [None, 5, 10, 12])
 @pytest.mark.parametrize(
     "sort",
     [
         "asc",
         "desc",
-    ]
+    ],
 )
 @pytest.mark.parametrize(
     "_name, data",
@@ -50,8 +43,9 @@ rng = np.random.default_rng(42)
         ),
     ],
 )
-def test_create_df(_name: str, data: ad.AnnData, get_ranked_data, sort: str, top_n: int | None):
-
+def test_create_df(
+    _name: str, data: ad.AnnData, get_ranked_data, sort: str, top_n: int | None
+):
     rg = get_ranked_data(data)
 
     u_stat = []
@@ -61,20 +55,11 @@ def test_create_df(_name: str, data: ad.AnnData, get_ranked_data, sort: str, top
     categories = []
 
     for cat in data.obs["class"].cat.categories:
-        lfc.append(
-            rg.stats[(f"{cat}", "logfoldchanges")].values
-        )
-        u_stat.append(
-            rg.stats[(f"{cat}", "scores")].values
-        )
-        pvals.append(
-            rg.stats[(f"{cat}", "pvals")].values
-        )
-        padj.append(
-            rg.stats[(f"{cat}", "pvals_adj")].values
-        )
+        lfc.append(rg.stats[(f"{cat}", "logfoldchanges")].values)
+        u_stat.append(rg.stats[(f"{cat}", "scores")].values)
+        pvals.append(rg.stats[(f"{cat}", "pvals")].values)
+        padj.append(rg.stats[(f"{cat}", "pvals_adj")].values)
         categories.append(cat)
-
 
     u_stat = np.array(u_stat).T
     pvals = np.array(pvals).T
@@ -90,7 +75,7 @@ def test_create_df(_name: str, data: ad.AnnData, get_ranked_data, sort: str, top
         gene_names=data.var["gene_names"].values,
         categories=categories,
         sort_by=sort,
-        top_n=top_n
+        top_n=top_n,
     ):
         df.set_index("gene", inplace=True)
         expected_df = rg.stats[f"{cat}"]
@@ -99,9 +84,10 @@ def test_create_df(_name: str, data: ad.AnnData, get_ranked_data, sort: str, top
             "abs_logfoldchange", ascending=sort == "asc"
         )
 
-        assert np.allclose(df, expected_df.head(
-            top_n if top_n is not None else len(expected_df)
-        ))
+        assert np.allclose(
+            df, expected_df.head(top_n if top_n is not None else len(expected_df))
+        )
+
 
 def test_invalid_sort():
     n_features = 10
@@ -115,7 +101,7 @@ def test_invalid_sort():
             u_stat=np.zeros((n_features, n_groups)),
             gene_names=np.array([f"gene_{i}" for i in range(n_features)]),
             categories=np.array([f"group_{i}" for i in range(n_groups)]),
-            sort_by="invalid"
+            sort_by="invalid",
         ):
             ...
 
@@ -127,7 +113,7 @@ def test_invalid_sort():
         "p_vals",
         "p_adj",
         "u_stat",
-    ]
+    ],
 )
 @pytest.mark.parametrize(
     "valid_shape, invalid_shape",
@@ -135,12 +121,10 @@ def test_invalid_sort():
         ((10, 5), (5, 10)),
         ((10, 5), (10, 6)),
         ((10, 5), (11, 5)),
-    ]
+    ],
 )
 def test_invalid_shape(
-    feature: str,
-    valid_shape: tuple[int, int],
-    invalid_shape: tuple[int, int]
+    feature: str, valid_shape: tuple[int, int], invalid_shape: tuple[int, int]
 ):
     n_features, n_groups = valid_shape
 
@@ -156,33 +140,26 @@ def test_invalid_shape(
     args[feature] = np.zeros(invalid_shape)
 
     with pytest.raises(ValueError):
-        for _ in create_df(
-            **args
-        ):
+        for _ in create_df(**args):
             ...
+
 
 @pytest.mark.parametrize(
     "gene_or_category, n_features, n_groups, invalid_shape",
     [
-        ("gene_names", 10, 12, (11, )),
+        ("gene_names", 10, 12, (11,)),
         ("gene_names", 10, 12, (11, 1)),
         ("gene_names", 10, 12, (9, 1)),
         ("gene_names", 10, 12, (9,)),
         ("gene_names", 10, 12, (10, 1, 1)),
-        ("categories", 12, 4, (5, )),
+        ("categories", 12, 4, (5,)),
         ("categories", 12, 4, (5, 1)),
-        ("categories", 12, 4, (3, )),
+        ("categories", 12, 4, (3,)),
         ("categories", 12, 4, (3, 1)),
         ("categories", 12, 4, (4, 1, 1)),
-    ]
+    ],
 )
-def test_invalid_gene_categories(
-        gene_or_category,
-        n_features,
-        n_groups,
-        invalid_shape
-):
-
+def test_invalid_gene_categories(gene_or_category, n_features, n_groups, invalid_shape):
     args = {
         "lfc": np.zeros((n_features, n_groups)),
         "p_vals": np.zeros((n_features, n_groups)),
@@ -192,27 +169,21 @@ def test_invalid_gene_categories(
         "categories": np.zeros((n_groups, 1)),
     }
 
-    args[
-        gene_or_category
-    ] = np.zeros(invalid_shape)
+    args[gene_or_category] = np.zeros(invalid_shape)
 
     with pytest.raises(ValueError):
-        for _ in create_df(
-            **args
-        ):
+        for _ in create_df(**args):
             ...
+
 
 @pytest.mark.parametrize(
     "n_features, top_n",
     [
         (100, 101),
         (100, -1),
-    ]
+    ],
 )
-def test_invalid_n(
-    n_features: int,
-    top_n: int
-):
+def test_invalid_n(n_features: int, top_n: int):
     n_groups = 10
 
     with pytest.raises(ValueError):
@@ -223,7 +194,6 @@ def test_invalid_n(
             u_stat=np.zeros((n_features, n_groups)),
             gene_names=np.array([f"gene_{i}" for i in range(n_features)]),
             categories=np.array([f"group_{i}" for i in range(n_groups)]),
-            top_n=top_n
+            top_n=top_n,
         ):
             ...
-

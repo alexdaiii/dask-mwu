@@ -11,7 +11,6 @@ SciPy is licensed under the BSD license.
 For more information, visit: https://www.scipy.org/
 """
 
-import logging
 from typing import TypeVar
 
 from dask_mwu._utils import (
@@ -21,13 +20,8 @@ from dask_mwu._utils import (
     EmptyArrayError,
 )
 
-# check if deps installed
-
 import numpy as np
-
-
 import dask.array as da
-
 
 from scipy._lib._util import _contains_nan
 from scipy.stats._stats_py import _rankdata
@@ -39,14 +33,6 @@ __all__ = [
     "compute_in_group_ranksum",
     "compute_tie_term",
 ]
-
-_LOG_FORMAT_DEBUG = (
-    "%(asctime)s:: %(levelname)s:: %(message)s:: %(pathname)s:%(funcName)s:%(lineno)d"
-)
-
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 
 T = TypeVar("T", bound=np.generic, covariant=True)
