@@ -46,8 +46,8 @@ class TestRankData:
                         [4, 5, np.nan, 6, 13, 14],
                         [7, np.nan, 9, 10, np.nan, np.nan],
                     ]
-                )
-            ]
+                ),
+            ],
         ],
     )
     def test_compute_rank(
@@ -78,7 +78,6 @@ class TestRankData:
 
         # with dask.config.set({"visualization.engine": "cytoscape"}):
         #     actual.visualize(f"../output/test_compute_rank_{_name}.png")
-
 
     @pytest.mark.parametrize(
         "_name, data, error",

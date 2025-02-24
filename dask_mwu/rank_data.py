@@ -195,7 +195,7 @@ def _rank_and_ties(
     """
     axis = 0
     method = "average"
-    nan_policy="propagate"
+    nan_policy = "propagate"
 
     x = np.asarray(a)
 
