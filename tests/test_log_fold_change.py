@@ -94,6 +94,7 @@ class TestLogFoldChange:
 
         # make sure its the correct shape
         assert actual.shape == (data.shape[1], len(categories))
+        assert actual.dtype == np.float64
 
         for i, cat in enumerate(categories):
             actual_lfc = actual[:, i]

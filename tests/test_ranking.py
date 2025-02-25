@@ -144,6 +144,9 @@ class TestRankSum:
         # should be the sum of ranks for the group, per feature
         assert actual.shape == (ranks.shape[1], masks.shape[1])
 
+        # should be a np float64
+        assert actual.dtype == np.float64
+
         for mask_col in range(masks.shape[1]):
             mask = masks[:, mask_col]
             expected_group = (ranks * mask.reshape(-1, 1)).sum(axis=0).compute()
