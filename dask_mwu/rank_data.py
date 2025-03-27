@@ -11,7 +11,6 @@ SciPy is licensed under the BSD license.
 For more information, visit: https://www.scipy.org/
 """
 
-import logging
 from typing import TypeVar
 
 from dask_mwu._utils import (
@@ -21,13 +20,8 @@ from dask_mwu._utils import (
     EmptyArrayError,
 )
 
-# check if deps installed
-
 import numpy as np
-
-
 import dask.array as da
-
 
 from scipy._lib._util import _contains_nan
 from scipy.stats._stats_py import _rankdata
@@ -39,14 +33,6 @@ __all__ = [
     "compute_in_group_ranksum",
     "compute_tie_term",
 ]
-
-_LOG_FORMAT_DEBUG = (
-    "%(asctime)s:: %(levelname)s:: %(message)s:: %(pathname)s:%(funcName)s:%(lineno)d"
-)
-
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 
 T = TypeVar("T", bound=np.generic, covariant=True)
@@ -195,7 +181,7 @@ def _rank_and_ties(
     """
     axis = 0
     method = "average"
-    nan_policy="propagate"
+    nan_policy = "propagate"
 
     x = np.asarray(a)
 
@@ -222,12 +208,15 @@ def rank_data(data: da.Array, *, n_features_per_chunk: int) -> da.Array:
     be chunked. If they are, you will get an error since each row (observation)
     needs to be ranked.
 
-    Memory usage when performing compute() on any of the 2 returning arrays:
+    Memory usage when performing compute() the returning array:
 
-    >>> 2 * 10 * ncpus * n_observations * n_features_per_chunk * 8 bytes (int64)
+    >>> 2 * 12 * ncpus * n_observations * n_features_per_chunk * 8 bytes (int64)
 
     This is because scipy _rankdata will allocate ~10 additional arrays of equal
-    size to the input to _rankdata. Dask usually loads 2 * ncpus chunks at a time.
+    size to the input to _rankdata. You need ~2 extra arrays to hold the ranks
+    and the ties when they are computed.
+
+    Dask usually loads 2 * ncpus chunks at a time.
 
     It is HIGHLY recommended to save this data to disk after computing the ranks
     because this is one of the more expensive operations.

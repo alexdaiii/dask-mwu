@@ -85,6 +85,10 @@ def test_p_vals(_name: str, data: np.ndarray, classes: np.ndarray, chunks: int) 
     p_expected = np.array(p_expected).T
     p_adj_expected = np.array(p_adj).T
 
-    np.testing.assert_allclose(actual_mwu.U, u_expected)
-    np.testing.assert_allclose(actual_mwu.p_vals, p_expected)
-    np.testing.assert_allclose(actual_mwu.p_adj, p_adj_expected)
+    assert actual_mwu.U.dtype == np.float64
+    assert actual_mwu.p_vals.dtype == np.float64
+    assert actual_mwu.p_adj.dtype == np.float64
+
+    assert np.allclose(actual_mwu.U, u_expected)
+    assert  np.allclose(actual_mwu.p_vals, p_expected)
+    assert np.allclose(actual_mwu.p_adj, p_adj_expected)

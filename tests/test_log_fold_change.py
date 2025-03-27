@@ -3,8 +3,6 @@ import pandas as pd
 import pytest
 import dask.array as da
 import anndata as ad
-import scanpy as sc
-from scanpy.tools._rank_genes_groups import _RankGenes
 
 from dask_mwu.logfoldchange import compute_logfoldchange, _compute_group_means
 from dask_mwu.rank_data import get_masks
@@ -34,7 +32,7 @@ class TestLogFoldChange:
             obs=obs,
         )
         adata.obs["class"] = adata.obs["class"].astype("category")
-        sc.pp.log1p(adata, base=base)
+        # sc.pp.log1p(adata, base=base)
 
         return adata
 
@@ -48,30 +46,19 @@ class TestLogFoldChange:
     @pytest.mark.parametrize("chunks", chunks)
     @pytest.mark.parametrize("_name, data, groups", examples)
     def test_compute_means_for_logfoldchange(
-        self, chunks: int, _name: str, data: np.ndarray, groups: np.ndarray
+        self,
+        chunks: int,
+        _name: str,
+        data: np.ndarray,
+        groups: np.ndarray,
+        get_ranked_data,
     ):
         data, mask, categories = self.get_data_masks(data, groups)
         # expected (from scanpy - which the lfc code is copied from)
         adata = self.setup_anndata(data, groups)
 
-        # this is what computes the rank gene groups internally in scanpy
-        rg = _RankGenes(
-            adata=adata,
-            groups="all",
-            groupby="class",
-            use_raw=adata.raw is not None,
-            mask_var=None,
-            reference="rest",
-            layer=None,
-            comp_pts=False,
-        )
-
-        rg.compute_statistics(
-            method="wilcoxon",
-            tie_correct=False,
-            rankby_abs=False,
-            corr_method="benjamini-hochberg",
-            n_genes_user=adata.X.shape[1],
+        rg = get_ranked_data(
+            adata,
         )
 
         mu1, mu2 = _compute_group_means(data, mask)
@@ -88,10 +75,18 @@ class TestLogFoldChange:
     @pytest.mark.parametrize("chunks", chunks)
     @pytest.mark.parametrize("_name, data, groups", examples)
     def test_compute_logfoldchange(
-        self, chunks: int, _name: str, data: np.ndarray, groups: np.ndarray, base: float | None
+        self,
+        chunks: int,
+        _name: str,
+        data: np.ndarray,
+        groups: np.ndarray,
+        base: float | None,
+        get_ranked_data,
     ):
         data, mask, categories = self.get_data_masks(data, groups)
         adata = self.setup_anndata(data, groups, base=base)
+
+        rg = get_ranked_data(adata, base)
 
         actual = compute_logfoldchange(
             data, mask, base=adata.uns.get("log1p", {}).get("base")
@@ -99,26 +94,7 @@ class TestLogFoldChange:
 
         # make sure its the correct shape
         assert actual.shape == (data.shape[1], len(categories))
-
-        rg = _RankGenes(
-            adata=adata,
-            groups="all",
-            groupby="class",
-            use_raw=adata.raw is not None,
-            mask_var=None,
-            reference="rest",
-            layer=None,
-            comp_pts=False,
-        )
-
-        rg.compute_statistics(
-            method="wilcoxon",
-            tie_correct=False,
-            rankby_abs=False,
-            corr_method="benjamini-hochberg",
-            # If this is not NONE then it will try to sort which is not what we want
-            n_genes_user=None,
-        )
+        assert actual.dtype == np.float64
 
         for i, cat in enumerate(categories):
             actual_lfc = actual[:, i]

@@ -46,8 +46,8 @@ class TestRankData:
                         [4, 5, np.nan, 6, 13, 14],
                         [7, np.nan, 9, 10, np.nan, np.nan],
                     ]
-                )
-            ]
+                ),
+            ],
         ],
     )
     def test_compute_rank(
@@ -78,7 +78,6 @@ class TestRankData:
 
         # with dask.config.set({"visualization.engine": "cytoscape"}):
         #     actual.visualize(f"../output/test_compute_rank_{_name}.png")
-
 
     @pytest.mark.parametrize(
         "_name, data, error",
@@ -144,6 +143,9 @@ class TestRankSum:
 
         # should be the sum of ranks for the group, per feature
         assert actual.shape == (ranks.shape[1], masks.shape[1])
+
+        # should be a np float64
+        assert actual.dtype == np.float64
 
         for mask_col in range(masks.shape[1]):
             mask = masks[:, mask_col]
